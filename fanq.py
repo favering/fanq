@@ -203,7 +203,7 @@ def background_update_sserver():
     后台周期性地测试各ss服务器，自动切换到最快的服务器
     """
     while True:
-        # 每隔10秒进行一次
+        # 每隔5秒进行一次
         time.sleep(5)
 
         # 获取ss服务器列表
@@ -222,11 +222,23 @@ def background_update_sserver():
 
         # 辅助显示
         print("\n[Updated ss server elapse]")
-        t = sorted(sserver_list, key=lambda s: s['elapse'])
-        for tt in t:
-            print(tt)
+        tmp = sorted(sserver_list, key=lambda s: s['elapse'])
+        for t in tmp:
+            print('{', end='')
+            print("{}:{}, ".format("elapse", t["elapse"]), end='')
+            print("{}:{}, ".format("addr", t["addr"]), end='')
+            print("{}:{}, ".format("port", t["port"]), end='')
+            print("{}:{}, ".format("pwd", t["pwd"]), end='')
+            print("{}:{}".format("enc", t["enc"]), end='')
+            print('}')
         print("\n[Updated current ss server elapse]")
-        print(current_s)
+        print('{', end='')
+        print("{}:{}, ".format("elapse", current_s["elapse"]), end='')
+        print("{}:{}, ".format("addr", current_s["addr"]), end='')
+        print("{}:{}, ".format("port", current_s["port"]), end='')
+        print("{}:{}, ".format("pwd", current_s["pwd"]), end='')
+        print("{}:{}".format("enc", current_s["enc"]), end='')
+        print('}')
         print()
 
         # 速度最快的比当前ss服务器速度快 1/3 时，切换到最快的服务器

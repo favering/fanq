@@ -146,17 +146,6 @@ def request_webpage_via_ss_proxy(url, proxy):
     opener = urllib.request.build_opener(SocksiPyHandler(socks.SOCKS5, proxy[0], int(proxy[1])))
     return opener.open(url, timeout=6)
 
-def check_pysocks():
-    """
-    检测PySocks是否已安装
-    """
-    try:
-        import socks
-    except ImportError:
-        return False
-    else:
-        return True
-
 def start_sslocal(sserver, local_port, output=False):
     """
     启动sslocal
@@ -295,7 +284,7 @@ def launch_webbrowser():
         try:
             browser_proc = subprocess.Popen(browser+b_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
-            print(e)
+            pass 
         else:
             p_open = True
     if not p_open:
@@ -303,7 +292,7 @@ def launch_webbrowser():
         try:
             browser_proc = subprocess.Popen(browser+b_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
-            print(e)
+            pass
         else:
             p_open = True
     return p_open
@@ -325,7 +314,14 @@ def main():
     try:
         subprocess.call("sslocal", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
-        print("[Error] sslocal is needed. Use \"pip install sslocal\" to install it.")
+        print("[Error] shadowsocks is needed. Use \"sudo pip(3) install shadowsocks\" to install it.")
+        sys.exit(-1)
+
+    # check if PySocks installed
+    try:
+        import socks
+    except ImportError as e:
+        print("[Error] PySocks is needed. Use \"sudo pip(3) install PySocks\" to install it.")
         sys.exit(-1)
 
     global sslocal_proc, current_s, local_port
@@ -352,24 +348,14 @@ def main():
     sslocal_proc = start_sslocal(current_s, local_port, output=True)
     time.sleep(1)
 
-    # PySocks安装检查
-    if not check_pysocks():
-        print("[Warn] PySocks not installed, could not backgroud update to fastest SOCKS5 proxy automatically.")
-        print("[Info] Use \"pip install PySocks\" to install it.\n")
-
     # 打开浏览器
     if not launch_webbrowser():
         ss_addr = "127.0.0.1:%s" % local_port
-        print("[Warn] Chrome browser could not be launched.\n"
+        print("[Warn] Chromium browser could not be launched.\n"
               "[Info] Open your web browser and manually set SOCKS5 proxy to {}\n".format(ss_addr))
 
     # 可进行后台更新
-    if check_pysocks():
-        background_update_sserver()
-    # 否则什么也不干，阻塞
-    else:
-        while True:
-            input()
+    background_update_sserver()
 
 if __name__ == "__main__":
     try:

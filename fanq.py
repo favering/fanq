@@ -9,46 +9,46 @@ import sys
 import time
 import os
 
-# sslocal½ø³Ì
+# sslocalè¿›ç¨‹
 sslocal_proc = None
-# ÕıÔÚÊ¹ÓÃµÄss·şÎñÆ÷
+# æ­£åœ¨ä½¿ç”¨çš„ssæœåŠ¡å™¨
 current_s = None
-# sslocal ±¾»ú¶Ë¿Ú
+# sslocal æœ¬æœºç«¯å£
 local_port = None
-# ä¯ÀÀÆ÷½ø³Ì
+# æµè§ˆå™¨è¿›ç¨‹
 browser_proc = None
-# °üº¬ssÕËºÅµÄÍøÒ³¼°Æä¶ÔÓ¦µÄÕÊºÅ¹Ø¼ü×Ö
-# ¸Ã±äÁ¿¿É¸ù¾İÊµ¼ÊÇé¿ö¾­³£¸üĞÂ
+# åŒ…å«ssè´¦å·çš„ç½‘é¡µåŠå…¶å¯¹åº”çš„å¸å·å…³é”®å­—
+# è¯¥å˜é‡å¯æ ¹æ®å®é™…æƒ…å†µç»å¸¸æ›´æ–°
 ss_site = [
     {"site": "http://www.ishadowsocks.org",
-     "server": "·şÎñÆ÷µØÖ·:",
-     "port": "¶Ë¿Ú:",
-     "password": "ÃÜÂë:",
-     "method": "¼ÓÃÜ·½Ê½:"},
+     "server": "æœåŠ¡å™¨åœ°å€:",
+     "port": "ç«¯å£:",
+     "password": "å¯†ç :",
+     "method": "åŠ å¯†æ–¹å¼:"},
 
     {"site": "http://freessr.top",
-     "server": "·şÎñÆ÷µØÖ·:",
-     "port": "¶Ë¿Ú:",
-     "password": "ÃÜÂë:",
-     "method": "¼ÓÃÜ·½Ê½:"}
+     "server": "æœåŠ¡å™¨åœ°å€:",
+     "port": "ç«¯å£:",
+     "password": "å¯†ç :",
+     "method": "åŠ å¯†æ–¹å¼:"}
 ]
 
 class ParseAddrError(Exception):
     """
-    ÎŞ·¨´ÓÖ¸¶¨Ò³Ãæ½âÎö»ñÈ¡µ½ssÕËºÅ
+    æ— æ³•ä»æŒ‡å®šé¡µé¢è§£æè·å–åˆ°ssè´¦å·
     """
     def __init__(self, err):
         self.err = err
 
 def get_sserver():
     """
-    ´Óss_siteµÄÍøÖ·ÖĞ»ñÈ¡ssÕËºÅ
-    :return: °üº¬ssÕÊºÅĞÅÏ¢µÄlist,Ã¿¸öÔªËØÊÇ×Öµä
+    ä»ss_siteçš„ç½‘å€ä¸­è·å–ssè´¦å·
+    :return: åŒ…å«sså¸å·ä¿¡æ¯çš„list,æ¯ä¸ªå…ƒç´ æ˜¯å­—å…¸
     """
     l = []
 
     for site in ss_site:
-        # ´ò¿ª°üº¬ÕÊºÅµÄÍøÒ³
+        # æ‰“å¼€åŒ…å«å¸å·çš„ç½‘é¡µ
         header = {
             "User-Agent": "Mozilla/5.0 (Windows NT 5.1; rv:18.0) Gecko/20100101 Firefox/18.0"}
         try:
@@ -59,13 +59,13 @@ def get_sserver():
             print("{} [{}]".format(e, site["site"]))
             continue
 
-        # °´Ö¸¶¨µÄssÕÊºÅ¹Ø¼ü×ÖÉú³ÉÕıÔòÆ¥ÅäÊ½
+        # æŒ‰æŒ‡å®šçš„sså¸å·å…³é”®å­—ç”Ÿæˆæ­£åˆ™åŒ¹é…å¼
         server_reg = site["server"] + r"([\w\d\.]+)"
         port_reg = site["port"] + r"(\d+)"
         password_reg = site["password"] + r"([\w\d\.-]+)"
         method_reg = site["method"] + r"([\d\w-]+)"
 
-        # ´Ó¸ÃÍøÒ³Öğ¸öÌáÈ¡ÕÊºÅĞÅÏ¢
+        # ä»è¯¥ç½‘é¡µé€ä¸ªæå–å¸å·ä¿¡æ¯
         matchs = list(re.finditer(server_reg, html_text))
         for idx in range(len(matchs)):
             if idx == len(matchs) - 1:
@@ -92,19 +92,19 @@ def get_sserver():
 
 def decode_read(response):
     """
-    ³¢ÊÔ¶Ôresponse½øĞĞ½âÂë
+    å°è¯•å¯¹responseè¿›è¡Œè§£ç 
     :param response:
-    :return charset: responseµÄ×Ö·û¼¯
-    :return html_text: response½âÂëºóµÄ×Ö·û´®
+    :return charset: responseçš„å­—ç¬¦é›†
+    :return html_text: responseè§£ç åçš„å­—ç¬¦ä¸²
     """
     rdata = response.read()
 
-    # Ê×Ñ¡°´ÍøÒ³·µ»Ø×Ö·û¼¯½øĞĞ½âÂë
+    # é¦–é€‰æŒ‰ç½‘é¡µè¿”å›å­—ç¬¦é›†è¿›è¡Œè§£ç 
     match = re.search("charset=(\w+)", response.getheader('Content-Type'))
     if match is not None:
         charset = match.group(1)
         html_text = rdata.decode(charset)
-    # Èç¹ûÃ»ÓĞ·µ»Ø×Ö·û¼¯£¬Ôò³¢ÊÔÆäËû×Ö·û¼¯
+    # å¦‚æœæ²¡æœ‰è¿”å›å­—ç¬¦é›†ï¼Œåˆ™å°è¯•å…¶ä»–å­—ç¬¦é›†
     else:
         charset = 'unknown'
         if charset == 'unknown':
@@ -137,9 +137,9 @@ def decode_read(response):
 
 def request_webpage_via_ss_proxy(url, proxy):
     """
-    Ê¹ÓÃSOCKS5´úÀí½øĞĞhttpÇëÇó
-    proxy[0] ´úÀíIP
-    proxy[1] ´úÀí¶Ë¿Ú
+    ä½¿ç”¨SOCKS5ä»£ç†è¿›è¡Œhttpè¯·æ±‚
+    proxy[0] ä»£ç†IP
+    proxy[1] ä»£ç†ç«¯å£
     """
     import socks
     from sockshandler import SocksiPyHandler
@@ -148,7 +148,7 @@ def request_webpage_via_ss_proxy(url, proxy):
 
 def start_sslocal(sserver, local_port, output=False):
     """
-    Æô¶¯sslocal
+    å¯åŠ¨sslocal
     """
     cmd = ['sslocal', '-s', sserver['addr'], '-p', sserver['port'],
            '-l', local_port, '-k', sserver['pwd'], '-m', sserver['enc']]
@@ -159,13 +159,13 @@ def start_sslocal(sserver, local_port, output=False):
 
 def find_an_available_sserver():
     """
-    ´ÓÖ¸¶¨Ò³Ãæ»ñÈ¡Ò»¸ö¿ÉÓÃssÕËºÅ¡£Ã»ÓĞµÄ»°·µ»ØNone
+    ä»æŒ‡å®šé¡µé¢è·å–ä¸€ä¸ªå¯ç”¨ssè´¦å·ã€‚æ²¡æœ‰çš„è¯è¿”å›None
     """
     sserver_list = get_sserver()
     import random
     random.shuffle(sserver_list)
 
-    # ÓÃ»ñÈ¡µÄÕËºÅ³¢ÊÔ·­
+    # ç”¨è·å–çš„è´¦å·å°è¯•ç¿»
     for i in range(len(sserver_list)):
         s = sserver_list[i]
         print("[Info] Trying \"{}\" (port:{} password:{})...".format(s['addr'], s['port'], s['pwd']))
@@ -189,27 +189,27 @@ def find_an_available_sserver():
 
 def background_update_sserver():
     """
-    ºóÌ¨ÖÜÆÚĞÔµØ²âÊÔ¸÷ss·şÎñÆ÷£¬×Ô¶¯ÇĞ»»µ½×î¿ìµÄ·şÎñÆ÷
+    åå°å‘¨æœŸæ€§åœ°æµ‹è¯•å„ssæœåŠ¡å™¨ï¼Œè‡ªåŠ¨åˆ‡æ¢åˆ°æœ€å¿«çš„æœåŠ¡å™¨
     """
     while True:
-        # Ã¿¸ô5Ãë½øĞĞÒ»´Î
+        # æ¯éš”5ç§’è¿›è¡Œä¸€æ¬¡
         time.sleep(5)
 
-        # »ñÈ¡ss·şÎñÆ÷ÁĞ±í
+        # è·å–ssæœåŠ¡å™¨åˆ—è¡¨
         sserver_list = get_sserver()
         if len(sserver_list) == 0:
             continue
 
-        # ²âÊÔÃ¿Ò»¸öss·şÎñÆ÷µÄËÙ¶È£¬¼ÆËã³öËÙ¶È×î¿ìµÄÄÇÒ»¸ö
+        # æµ‹è¯•æ¯ä¸€ä¸ªssæœåŠ¡å™¨çš„é€Ÿåº¦ï¼Œè®¡ç®—å‡ºé€Ÿåº¦æœ€å¿«çš„é‚£ä¸€ä¸ª
         for i in range(len(sserver_list)):
             test_sserver_speed(sserver_list[i])
         fastest_s = sorted(sserver_list, key=lambda s: s['elapse'])[0]
 
-        # ²âÊÔµ±Ç°ss·şÎñÆ÷µÄËÙ¶È
+        # æµ‹è¯•å½“å‰ssæœåŠ¡å™¨çš„é€Ÿåº¦
         global current_s
         test_sserver_speed(current_s)
 
-        # ¸¨ÖúÏÔÊ¾
+        # è¾…åŠ©æ˜¾ç¤º
         print("\n[Updated ss server elapse]")
         tmp = sorted(sserver_list, key=lambda s: s['elapse'])
         for t in tmp:
@@ -230,7 +230,7 @@ def background_update_sserver():
         print('}')
         print()
 
-        # ËÙ¶È×î¿ìµÄ±Èµ±Ç°ss·şÎñÆ÷ËÙ¶È¿ì 1/3 Ê±£¬ÇĞ»»µ½×î¿ìµÄ·şÎñÆ÷
+        # é€Ÿåº¦æœ€å¿«çš„æ¯”å½“å‰ssæœåŠ¡å™¨é€Ÿåº¦å¿« 1/3 æ—¶ï¼Œåˆ‡æ¢åˆ°æœ€å¿«çš„æœåŠ¡å™¨
         if fastest_s['elapse']/current_s['elapse'] < (2/3):
             print("\n[Info] Switch to \"{}\" (port:{} password:{})".format(
                 fastest_s['addr'], fastest_s['port'], fastest_s['pwd']))
@@ -241,13 +241,13 @@ def background_update_sserver():
 
 def test_sserver_speed(s):
     """
-    ²âÊÔ·­Ç½ºóµÄËÙ¶È
+    æµ‹è¯•ç¿»å¢™åçš„é€Ÿåº¦
     """
     tmp_port = str(int(local_port) + 1)
     proc = start_sslocal(s, tmp_port)
     time.sleep(1)
 
-    # µ±Ç°Ê±¿Ì
+    # å½“å‰æ—¶åˆ»
     s_time = time.time()
     try:
         for i in range(3):
@@ -256,10 +256,10 @@ def test_sserver_speed(s):
             request_webpage_via_ss_proxy("https://gist.github.com", ("127.0.0.1", tmp_port))
     except Exception as e:
         print("[Error] request_webpage_via_ss_proxy error [{} \"{}\"]".format(e, s['addr']))
-        # Á¬²»Í¨£¬Éè¸ö³¬´óÖµ
+        # è¿ä¸é€šï¼Œè®¾ä¸ªè¶…å¤§å€¼
         s['elapse'] = round(1000, 1)
     else:
-        # µÃ³öºÄÊ±
+        # å¾—å‡ºè€—æ—¶
         e_time = time.time()
         s['elapse'] = round(e_time - s_time, 1)
     finally:
@@ -267,14 +267,14 @@ def test_sserver_speed(s):
 
 def launch_webbrowser():
     """
-    ´ò¿ªä¯ÀÀÆ÷
-    Ä¿Ç°Ö»Ö§³Öchromium
+    æ‰“å¼€æµè§ˆå™¨
+    ç›®å‰åªæ”¯æŒchromium
     """
     global browser_proc
     b_args = ["www.google.com",
               "--user-data-dir",
               "--proxy-server=SOCKS5://127.0.0.1:{}".format(local_port)]
-    # rootÓÃ»§Ğè¼Ó--no-sandbox²ÎÊı
+    # rootç”¨æˆ·éœ€åŠ --no-sandboxå‚æ•°
     if os.geteuid() == 0:
         b_args.insert(0, "--no-sandbox")
 
@@ -327,10 +327,10 @@ def main():
     global sslocal_proc, current_s, local_port
     local_port = parse_args().local_port
 
-    # Ñ°ÕÒ¿ÉÓÃÕËºÅ
+    # å¯»æ‰¾å¯ç”¨è´¦å·
     while True:
         s = find_an_available_sserver()
-        # Ã»ÓĞÕÒµ½¿ÉÓÃÕËºÅ£¬Ñ¯ÎÊÊÇ·ñ¼ÌĞøÑ°ÕÒ
+        # æ²¡æœ‰æ‰¾åˆ°å¯ç”¨è´¦å·ï¼Œè¯¢é—®æ˜¯å¦ç»§ç»­å¯»æ‰¾
         if s is None:
             print("[Error] Could not find an available ss server.")
             if input("[Quest] Try again? Y/N: ").lower() == 'y':
@@ -338,23 +338,23 @@ def main():
                 continue
             else:
                 sys.exit(-1)
-        # ½«¿ÉÓÃµÄss·şÎñÆ÷ÉèÎªµ±Ç°·şÎñÆ÷£¬
+        # å°†å¯ç”¨çš„ssæœåŠ¡å™¨è®¾ä¸ºå½“å‰æœåŠ¡å™¨ï¼Œ
         else:
             current_s = s
             break
 
-    # Æô¶¯sslocal
+    # å¯åŠ¨sslocal
     print('[Info] Connected to \"{}\"\n'.format(current_s['addr']))
     sslocal_proc = start_sslocal(current_s, local_port, output=True)
     time.sleep(1)
 
-    # ´ò¿ªä¯ÀÀÆ÷
+    # æ‰“å¼€æµè§ˆå™¨
     if not launch_webbrowser():
         ss_addr = "127.0.0.1:%s" % local_port
         print("[Warn] Chromium browser could not be launched.\n"
               "[Info] Open your web browser and manually set SOCKS5 proxy to {}\n".format(ss_addr))
 
-    # ¿É½øĞĞºóÌ¨¸üĞÂ
+    # åå°æ›´æ–°ssä»£ç†
     background_update_sserver()
 
 if __name__ == "__main__":

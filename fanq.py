@@ -26,6 +26,12 @@ ss_site = [
      "password": "密码:",
      "method": "加密方式:"},
 
+    {"site": "https://ss.uprogrammer.cn",
+     "server": "服务器地址:",
+     "port": "端口:",
+     "password": "密码:",
+     "method": "加密方式:"},
+
     {"site": "http://freessr.top",
      "server": "服务器地址:",
      "port": "端口:",

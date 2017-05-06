@@ -9,35 +9,51 @@ import sys
 import time
 import os
 
-# sslocal进程
-sslocal_proc = None
+
 # 正在使用的ss服务器
-current_s = None
+current_sserver = {'url': None,
+                   'port': None,
+                   'pwd': None,
+                   'enc': None,
+                   'elapse': round(1000, 1)}
+
 # sslocal 本机端口
-local_port = None
+sslocal_port = None
+
+# sslocal 进程
+sslocal_proc = None
+
 # 浏览器进程
 browser_proc = None
+
 # 包含ss账号的网页及其对应的帐号关键字
 # 该变量可根据实际情况经常更新
 ss_site = [
-    {"site": "http://www.ishadowsocks.org",
+    {"url": "https://github.com/Alvin9999/new-pac/wiki/ss%E5%85%8D%E8%B4%B9%E8%B4%A6%E5%8F%B7",
+     "server": r"服务器[\d]+：",
+     "port": "端口：",
+     "password": "密码：",
+     "method": "加密方式："},
+
+    {"url": "http://www.ishadow.info",
      "server": "服务器地址:",
      "port": "端口:",
      "password": "密码:",
      "method": "加密方式:"},
 
-    {"site": "https://ss.uprogrammer.cn",
-     "server": "服务器地址:",
-     "port": "端口:",
-     "password": "密码:",
-     "method": "加密方式:"},
+    {"url": "http://freevpnss.me/",
+     "server": "服务器地址：",
+     "port": "端口：",
+     "password": "码：",
+     "method": "加密方式："},
 
-    {"site": "http://freessr.top",
+    {"url": "http://freessr.xyz",
      "server": "服务器地址:",
      "port": "端口:",
      "password": "密码:",
      "method": "加密方式:"}
 ]
+
 
 class ParseAddrError(Exception):
     """
@@ -46,55 +62,81 @@ class ParseAddrError(Exception):
     def __init__(self, err):
         self.err = err
 
-def get_sserver():
+
+def log(e):
+    print("[Fanq | Log]: {}".format(str(e)))
+
+
+def err(e):
+    print("[Fanq | Err]: {}".format(str(e)))
+
+
+def get_sserver(site):
     """
-    从ss_site的网址中获取ss账号
+    从指定的site页面中获取ss账号
     :return: 包含ss帐号信息的list,每个元素是字典
     """
-    l = []
+    sserver_list = []
 
-    for site in ss_site:
-        # 打开包含帐号的网页
-        header = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 5.1; rv:18.0) Gecko/20100101 Firefox/18.0"}
+    # 打开url页面
+    header = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 5.1; rv:18.0) Gecko/20100101 Firefox/18.0"}
+    try:
+        request = urllib.request.Request(url=site['url'], headers=header)
+        response = urllib.request.urlopen(request, timeout=8)
+        html_text = decode_read(response)[1]
+    except Exception as e:
+        raise NotImplementedError("{} | {}".format(str(e), site['url']))
+
+    # 按指定的ss帐号关键字生成正则匹配式
+    server_reg = site["server"] + r"\s*([\w\d\.]+)"
+    port_reg = site["port"] + r"\s*(\d+)"
+    password_reg = site["password"] + r"\s*([\w\d\.-]+)"
+    method_reg = site["method"] + r"\s*([\d\w-]+)"
+
+    # 从该网页逐个提取帐号信息
+    matchs = list(re.finditer(server_reg, html_text))
+    for idx in range(len(matchs)):
+        if idx == len(matchs) - 1:
+            lines = html_text[matchs[idx].start():]
+        else:
+            lines = html_text[matchs[idx].start():matchs[idx + 1].start()]
+
+        # server
         try:
-            request = urllib.request.Request(url=site["site"], headers=header)
-            response = urllib.request.urlopen(request, timeout=8)
-            html_text = decode_read(response)[1]
+            server = matchs[idx].group(1)
         except Exception as e:
-            print("{} [{}]".format(e, site["site"]))
+            err("server match error | {}".format(site['url']))
             continue
 
-        # 按指定的ss帐号关键字生成正则匹配式
-        server_reg = site["server"] + r"([\w\d\.]+)"
-        port_reg = site["port"] + r"(\d+)"
-        password_reg = site["password"] + r"([\w\d\.-]+)"
-        method_reg = site["method"] + r"([\d\w-]+)"
+        # port
+        try:
+            port = re.search(port_reg, lines).group(1)
+        except Exception as e:
+            err("port match error | {} | {}".format(site['url'], server))
+            continue
 
-        # 从该网页逐个提取帐号信息
-        matchs = list(re.finditer(server_reg, html_text))
-        for idx in range(len(matchs)):
-            if idx == len(matchs) - 1:
-                lines = html_text[matchs[idx].start():]
-            else:
-                lines = html_text[matchs[idx].start():matchs[idx + 1].start()]
+        # password
+        try:
+            password = re.search(password_reg, lines).group(1)
+        except Exception as e:
+            err("password match error | {} | {}".format(site['url'], server))
+            continue
 
-            try:
-                server = matchs[idx].group(1)
-                port = re.search(port_reg, lines).group(1)
-                password = re.search(password_reg, lines).group(1)
-                method = re.search(method_reg, lines).group(1)
-            except Exception as e:
-                print("reg match error [{}]".format(e))
-                print("\n")
-                continue
+        # method
+        try:
+            method = re.search(method_reg, lines).group(1)
+        except Exception as e:
+            err("method match error | {} | {}".format(site['url'], server))
+            continue
 
-            l.append({'addr': server,
-                      'port': port,
-                      'pwd': password,
-                      'enc': method,
-                      'elapse': round(1000, 1)})
-    return l
+        sserver_list.append({'url': server,
+                             'port': port,
+                             'pwd': password,
+                             'enc': method,
+                             'elapse': round(1000, 1)})
+    return sserver_list
+
 
 def decode_read(response):
     """
@@ -141,6 +183,7 @@ def decode_read(response):
         raise ParseAddrError("Cannot decode the page")
     return charset, html_text
 
+
 def request_webpage_via_ss_proxy(url, proxy):
     """
     使用SOCKS5代理进行http请求
@@ -152,131 +195,54 @@ def request_webpage_via_ss_proxy(url, proxy):
     opener = urllib.request.build_opener(SocksiPyHandler(socks.SOCKS5, proxy[0], int(proxy[1])))
     return opener.open(url, timeout=6)
 
-def start_sslocal(sserver, local_port, output=False):
+
+def start_sslocal(sserver, local_port):
     """
     启动sslocal
     """
-    cmd = ['sslocal', '-s', sserver['addr'], '-p', sserver['port'],
+    cmd = ['sslocal', '-s', sserver['url'], '-p', sserver['port'],
            '-l', local_port, '-k', sserver['pwd'], '-m', sserver['enc']]
-    if output == False:
-        return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    elif output == True:
-        return subprocess.Popen(cmd)
+    #return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return subprocess.Popen(cmd)
 
-def find_an_available_sserver():
+
+def test_sserver_speed(sserver):
     """
-    从指定页面获取一个可用ss账号。没有的话返回None
+    测试使用指定的ss server翻强的速度
     """
-    sserver_list = get_sserver()
-    import random
-    random.shuffle(sserver_list)
+    if sserver['url'] is None:
+        sserver['elapse'] = round(1000, 1)
+        return
 
-    # 用获取的账号尝试翻
-    for i in range(len(sserver_list)):
-        s = sserver_list[i]
-        print("[Info] Trying \"{}\" (port:{} password:{})...".format(s['addr'], s['port'], s['pwd']))
-        proc = start_sslocal(s, local_port)
-        time.sleep(1)
-
-        try:
-            request_webpage_via_ss_proxy("https://www.google.com", ("127.0.0.1", local_port))
-        except Exception as e:
-            print(e)
-            print()
-            continue
-        else:
-            break
-        finally:
-            proc.terminate()
-    else:
-        return None
-
-    return sserver_list[i]
-
-def background_update_sserver():
-    """
-    后台周期性地测试各ss服务器，自动切换到最快的服务器
-    """
-    while True:
-        # 每隔5秒进行一次
-        time.sleep(5)
-
-        # 获取ss服务器列表
-        sserver_list = get_sserver()
-        if len(sserver_list) == 0:
-            continue
-
-        # 测试每一个ss服务器的速度，计算出速度最快的那一个
-        for i in range(len(sserver_list)):
-            test_sserver_speed(sserver_list[i])
-        fastest_s = sorted(sserver_list, key=lambda s: s['elapse'])[0]
-
-        # 测试当前ss服务器的速度
-        global current_s
-        test_sserver_speed(current_s)
-
-        # 辅助显示
-        print("\n[Updated ss server elapse]")
-        tmp = sorted(sserver_list, key=lambda s: s['elapse'])
-        for t in tmp:
-            print('{', end='')
-            print("{}:{}, ".format("elapse", t["elapse"]), end='')
-            print("{}:{}, ".format("addr", t["addr"]), end='')
-            print("{}:{}, ".format("port", t["port"]), end='')
-            print("{}:{}, ".format("pwd", t["pwd"]), end='')
-            print("{}:{}".format("enc", t["enc"]), end='')
-            print('}')
-        print("\n[Updated current ss server elapse]")
-        print('{', end='')
-        print("{}:{}, ".format("elapse", current_s["elapse"]), end='')
-        print("{}:{}, ".format("addr", current_s["addr"]), end='')
-        print("{}:{}, ".format("port", current_s["port"]), end='')
-        print("{}:{}, ".format("pwd", current_s["pwd"]), end='')
-        print("{}:{}".format("enc", current_s["enc"]), end='')
-        print('}')
-        print()
-
-        # 速度最快的比当前ss服务器速度快 1/3 时，切换到最快的服务器
-        if fastest_s['elapse']/current_s['elapse'] < (2/3):
-            print("\n[Info] Switch to \"{}\" (port:{} password:{})".format(
-                fastest_s['addr'], fastest_s['port'], fastest_s['pwd']))
-            global sslocal_proc
-            sslocal_proc.terminate()
-            sslocal_proc = start_sslocal(fastest_s, local_port, output=True)
-            current_s = fastest_s
-
-def test_sserver_speed(s):
-    """
-    测试翻墙后的速度
-    """
-    tmp_port = str(int(local_port) + 1)
-    proc = start_sslocal(s, tmp_port)
+    test_port = str(int(local_port) + 1)
+    test_proc = start_sslocal(sserver, test_port)
+    # a little wait for test process starting
     time.sleep(1)
 
     # 当前时刻
-    s_time = time.time()
+    start_time = time.time()
     try:
         for i in range(3):
-            request_webpage_via_ss_proxy("https://www.google.com", ("127.0.0.1", tmp_port))
-            request_webpage_via_ss_proxy("https://zh.wikipedia.org", ("127.0.0.1", tmp_port))
-            request_webpage_via_ss_proxy("https://gist.github.com", ("127.0.0.1", tmp_port))
+            request_webpage_via_ss_proxy("https://www.google.com", ("127.0.0.1", test_port))
+            request_webpage_via_ss_proxy("https://zh.wikipedia.org", ("127.0.0.1", test_port))
+            request_webpage_via_ss_proxy("https://gist.github.com", ("127.0.0.1", test_port))
     except Exception as e:
-        print("[Error] request_webpage_via_ss_proxy error [{} \"{}\"]".format(e, s['addr']))
-        # 连不通，设个超大值
-        s['elapse'] = round(1000, 1)
+        err("request_webpage_via_ss_proxy | {} | {}".format(sserver['url'], e))
+        # 连不通，设为超大值
+        sserver['elapse'] = round(1000, 1)
     else:
         # 得出耗时
-        e_time = time.time()
-        s['elapse'] = round(e_time - s_time, 1)
+        end_time = time.time()
+        sserver['elapse'] = round(end_time - start_time, 1)
     finally:
-        proc.terminate()
+        test_proc.terminate()
+
 
 def launch_webbrowser():
     """
     打开浏览器
     目前只支持chromium
     """
-    global browser_proc
     b_args = ["www.google.com",
               "--user-data-dir",
               "--proxy-server=SOCKS5://127.0.0.1:{}".format(local_port)]
@@ -284,24 +250,20 @@ def launch_webbrowser():
     if os.geteuid() == 0:
         b_args.insert(0, "--no-sandbox")
 
-    p_open = False
-    if not p_open:
+    bproc = None
+    if bproc is None:
         browser = ["chromium"]
         try:
-            browser_proc = subprocess.Popen(browser+b_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception as e:
-            pass 
-        else:
-            p_open = True
-    if not p_open:
-        browser = ["chromium-browser"]
-        try:
-            browser_proc = subprocess.Popen(browser+b_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            bproc = subprocess.Popen(browser+b_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
             pass
-        else:
-            p_open = True
-    return p_open
+    if bproc is None:
+        browser = ["chromium-browser"]
+        try:
+            bproc = subprocess.Popen(browser+b_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            pass
+    return bproc
 
 
 def parse_args():
@@ -311,7 +273,47 @@ def parse_args():
     parser.add_argument('-p', '--local_port', default='1080')
     return parser.parse_args()
 
+
+def try_all_sserver():
+
+    # 循环测试每一个提供ss帐号的页面内的帐号
+    for site in ss_site:
+        try:
+            sserver_list = get_sserver(site)
+        except Exception as e:
+            err(e)
+            continue
+
+        # 每一个sserver和当前sserver的速度比较
+        for sserver in sserver_list:
+
+            global sslocal_proc, current_sserver
+            # 测试该sserver和当前sserver的速度
+            test_sserver_speed(sserver)
+            test_sserver_speed(current_sserver)
+
+            # 当该sserver速度比当前sserver速度快 1/3 时，
+            if sserver['elapse']/current_sserver['elapse'] < (2/3):
+                # 切换为该sserver
+                if sslocal_proc is not None:
+                    sslocal_proc.terminate()
+                sslocal_proc = start_sslocal(sserver, local_port)
+                current_sserver = sserver
+
+                # log
+                log("Elapse: {} | Connected to: {} | port:{} pwd:{} enc:{}".format(
+                    sserver['elapse'], sserver['url'], sserver['port'], sserver['pwd'], sserver['enc']))
+
+                # 打开浏览器
+                global browser_proc
+                if browser_proc is None:
+                    browser_proc = launch_webbrowser()
+                    if browser_proc is None:
+                        err("Chromium browser could not be launched.")
+
+
 def main():
+    # check python version
     if sys.version[0] != '3':
         print("[Error] Python3 is needed.")
         sys.exit(-1)
@@ -320,48 +322,24 @@ def main():
     try:
         subprocess.call("sslocal", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
-        print("[Error] shadowsocks is needed. Use \"sudo pip(3) install shadowsocks\" to install it.")
+        err("shadowsocks is needed. Use \"sudo pip(3) install shadowsocks\" to install it.")
         sys.exit(-1)
 
     # check if PySocks installed
     try:
         import socks
     except ImportError as e:
-        print("[Error] PySocks is needed. Use \"sudo pip(3) install PySocks\" to install it.")
+        print("PySocks is needed. Use \"sudo pip(3) install PySocks\" to install it.")
         sys.exit(-1)
 
     global sslocal_proc, current_s, local_port
     local_port = parse_args().local_port
 
-    # 寻找可用账号
+    # do it
     while True:
-        s = find_an_available_sserver()
-        # 没有找到可用账号，询问是否继续寻找
-        if s is None:
-            print("[Error] Could not find an available ss server.")
-            if input("[Quest] Try again? Y/N: ").lower() == 'y':
-                print()
-                continue
-            else:
-                sys.exit(-1)
-        # 将可用的ss服务器设为当前服务器，
-        else:
-            current_s = s
-            break
+        try_all_sserver()
+        time.sleep(1.5)
 
-    # 启动sslocal
-    print('[Info] Connected to \"{}\"\n'.format(current_s['addr']))
-    sslocal_proc = start_sslocal(current_s, local_port, output=True)
-    time.sleep(1)
-
-    # 打开浏览器
-    if not launch_webbrowser():
-        ss_addr = "127.0.0.1:%s" % local_port
-        print("[Warn] Chromium browser could not be launched.\n"
-              "[Info] Open your web browser and manually set SOCKS5 proxy to {}\n".format(ss_addr))
-
-    # 后台更新ss代理
-    background_update_sserver()
 
 if __name__ == "__main__":
     try:
